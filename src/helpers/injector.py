@@ -1,33 +1,24 @@
+# Method injector.
+# Reference: https://modthesims.info/showthread.php?p=4751246
+
 import inspect
 from functools import wraps
 
 
-def inject(target_object, target_function_name, safe=False):
-    if safe and not hasattr(target_object, target_function_name):
-        def _self_wrap(wrap_function):
-            return wrap_function
+def inject(target_function, new_function):
 
-        return _self_wrap
+    @wraps(target_function)
+    def _inject(*args, **kwargs):
+        return new_function(target_function, *args, **kwargs)
 
-    def _wrap_original_function(original_function, new_function):
-        @wraps(original_function)
-        def _wrapped_function(*args, **kwargs):
-            if type(original_function) is property:
-                return new_function(original_function.fget, *args, **kwargs)
-            else:
-                return new_function(original_function, *args, **kwargs)
+    return _inject
 
-        if inspect.ismethod(original_function):
-            return classmethod(_wrapped_function)
-        elif type(original_function) is property:
-            return property(_wrapped_function)
-        else:
-            return _wrapped_function
 
-    def _injected(wrap_function):
-        original_function = getattr(target_object, target_function_name)
-        setattr(target_object, target_function_name, _wrap_original_function(original_function, wrap_function))
+def inject_to(target_object, target_function_name):
 
-        return wrap_function
+    def _inject_to(new_function):
+        target_function = getattr(target_object, target_function_name)
+        setattr(target_object, target_function_name, inject(target_function, new_function))
+        return new_function
 
-    return _injected
+    return _inject_to

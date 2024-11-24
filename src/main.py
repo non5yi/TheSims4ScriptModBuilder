@@ -1,17 +1,28 @@
-import sims4.commands
+from helpers import injector
+import sims4.log
+from sims.sim_spawner import SimSpawner
 
+logger = sims4.log.Logger('julie', default_owner='julie')
 
-@sims4.commands.Command('hello', command_type=sims4.commands.CommandType.Live)
-def hello_world(_connection=None):
-    output = sims4.commands.CheatOutput(_connection)
-    output("Hello World")
+# Not that when injecting to cls function, if cls is not used in that function,
+# it is not passed in *args.
+@injector.inject_to(SimSpawner, 'spawn_sim')
+def _override_spawn_sim(original, *args, **kwargs):
+    logger.info("julie enter")
+    result = original(*args, **kwargs)
 
+    try:
+        if result:
+            logger.info("julie, args {}, kwargs {}", args, kwargs)
+            if not args:
+                return result
+            sim_info = args[0]
+            logger.info("julie, sim_info {}", sim_info)
 
-@sims4.commands.Command('cheats_help', command_type=sims4.commands.CommandType.Live)
-def hello_world(_connection=None):
-    output = sims4.commands.CheatOutput(_connection)
-    output("add_money <amount>: add money to your current sim")
-    output("remove_money <amount>: remove money from your current sim")
-    output("max_skill <skill name (no space)>: set the skill to max level")
-    output("become_friend <firstname> <lastname>: become friend with the target sim")
-    output("become_lover <firstname> <lastname>: become lover with the target sim")
+    except Exception as e:
+        logger.exception(
+            "julie SimSpawner.spawn_sim injection failed to run, err {}",
+            str(e))
+
+    logger.info("julie end.")
+    return result
